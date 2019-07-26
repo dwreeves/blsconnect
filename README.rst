@@ -13,7 +13,7 @@ BLS Connect is an integration of BLS's API built for Python. It provides users a
 
 **Note:** Functionality for ``bls_search()`` is currently very limited to states in the LAUS (Local Area Unemployment Statistics) and the popular CPS employment series at a national level. Adding more popular time series is a key focus of future development.
 
-For more information, `check out the docs`_.
+Docs coming soon. In the meanwhile, check out the docstrings.
 
 Installation and Setup
 ----------------------
@@ -42,7 +42,9 @@ A Simple Example
     series_names = bls_search(data="U3",
                               state=["FL", "GA", "US"],
                               sa=True)
-    df = bls.series(series_names)
+    df = bls.series(series_names,
+                    start_year=2010,
+                    end_year=2019)
     df.head()
 
 About

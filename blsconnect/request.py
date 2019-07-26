@@ -39,10 +39,7 @@ class RequestBLS(object):
         
         # Setup key
         self.key = key
-        if key is None:
-            self.api_year_limit = 10
-        else:
-            self.api_year_limit = 20
+        self.api_year_limit = 10 if key is None else 20
 
     def series(
         self,
@@ -51,7 +48,10 @@ class RequestBLS(object):
         end_year:int=None,
         shape:str='wide',
         keep_footnotes:bool=False,
-        rtn_msg:bool=False
+        rtn_msg:bool=False,
+        interpolate:str=None,
+        groupby:str=None, # Does not work right now
+        groupby_method:str='mean' # Does not work right now
     ):
         """Get a data series from the BLS API by Series ID for a given date range.
         
@@ -71,12 +71,22 @@ class RequestBLS(object):
         :param keep_footnotes: If True, keeps the Footnotes field from the data. Otherwise this
                                field is dropped.
         :param rtn_msg: Returns messages alongside the DataFrame.
+        :param interpolate: Fills in missing values. This just passes a string to df.interpolate().
+                            Notably, this occurs before groupby, which is why you might want to
+                            specify this in .series() instead of with the returned DataFrame.
+        :param groupby: Collapses data according to some frequency. Valid inputs are 'y', 's', 'q',
+                        'm'.
+        :param groupby_method: How to collapse data if it will be collapsed. 'mean' is the default
+                               method. Can also do 'first', 'last', 'min', and 'max'.
         :returns: DataFrame, or (DataFrame, [messages]) if :param:`rtn_msg` is True.
         """
         
         # Handle user inputs
         if shape not in ['wide', 'long']:
             raise InputError('shape kwarg must be either "wide" or "long".')
+        if interpolate:
+            pd.DataFrame({'a' : [0]}) \
+                .interpolate(method=interpolate) # raises error if interpolate method is invalid.
         start_year, end_year = self._year_handler(start_year, end_year)
         if isinstance(series, dict):
             series = list(series.values())
@@ -94,6 +104,10 @@ class RequestBLS(object):
             next_df = self._tablefy(r[s_y].content, shape, keep_footnotes)
             df = df.append(next_df)
         df = self._cleanup_df(df, shape)
+        
+        # Transform data
+        if interpolate:
+            df = df.interpolate(method=interpolate)
         
         # Return
         if rtn_msg:
@@ -116,18 +130,18 @@ class RequestBLS(object):
         :param end_year: Latest year of data to pull.
         :returns: Tuple of adjusted years.
         """
-        if start_year is None or end_year is None:
-            if start_year is None and end_year is None:
-                import datetime
-                end_year = datetime.datetime.now().year
-            if start_year is None:
-                start_year = int(end_year) - (self.api_year_limit-1)
-            if end_year is None:
-                end_year = int(start_year) + (self.api_year_limit-1)
+        if start_year is None and end_year is None:
+            import datetime
+            end_year = datetime.datetime.now().year
+        if start_year is None:
+            start_year = int(end_year) - (self.api_year_limit-1)
+        if end_year is None:
+            end_year = int(start_year) + (self.api_year_limit-1)
         if start_year > end_year:
-            self.logger.warning(f'End year should be less than or equal to end year. '
-                                f'User input: (start_year={start_year}, end_year={end_year}). '
-                                'These values were flipped to continue the request.')
+            self.logger.log(self.msg_log_level,
+                f'End year should be less than or equal to end year. User input:'
+                f'(start_year={start_year}, end_year={end_year}). These values were flipped to '
+                'continue the request.')
             start_year, end_year = end_year, start_year
         return start_year, end_year
 
@@ -233,12 +247,26 @@ class RequestBLS(object):
         df = df.reset_index()
         df = df[[c for c in df.columns if c != 'index']]
         return df
-
     
+    def _year_merge_df(self, start_year, end_year,):
+        rng = range((end_year - start_year + 1) * 12)
+        year = [start_year + (i // 12) for i in rng]
+        halfyears = [((i//6)%2) + 1 for i in rng]
+        quarters = [((i//3)%4) + 1 for i in rng]
+        months = [(i%12) + 1 for i in rng]
+        
+        data_dict = {
+            'year' : year,
+            'S' : halfyears,
+            'Q' : quarters,
+            'M' : months
+        }
+        
+        return pd.DataFrame(data_dict)
     # def _create_date(self, df):
         # """Handles the logic of setting up a date column. It's here to keep the
         # _tablefy() method a bit cleaner."""
-        # period_type = df['period'][0][0] # first char of period
+        # period_type = df.iloc[0].period[0] # first char of period
         # if period_type == 'A':
             # df = df.assign(date=pd.to_datetime(df['year'])) \
                 # .set_index('date') \

@@ -7,17 +7,15 @@ with io.open('README.rst', 'rt', encoding='utf8') as f:
 
 setup(
     name='blsconnect',
+    version='0.9.0',
     packages=find_packages(),
+    author='Daniel Reeves',
     maintainer='Daniel Reeves',
     include_package_data=True,
-    install_requires=[
-    ],
-    setup_requires=[
-        'pytest-runner',
-    ],
     tests_require=[
         'pytest',
     ],
+    url='https://github.com/dwreeves/blsconnect',
     description="Integration of BLS's API built for Python.",
     long_description=readme
 )
