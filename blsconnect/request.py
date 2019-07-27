@@ -27,9 +27,17 @@ class RequestBLS(object):
     :param key: BLS API key.
     :param msg_log_level: What level to log messages returned from an API request. Default level
                           is WARNING.
+    :param start_year: Default start_year for series(). It's generally better to set this in the
+                       .series() method instead of at the class level.
+    :param end_year: Default end_year for series(). It's generally better to set this in the
+                     .series() method instead of at the class level.
+    :attr messages: Returns messages from last time .series() was run.
+    :attr catalog: Returns data catalog from last time .series() was run. Only available if API
+                   key is set.
     """
     
-    def __init__(self, key:str=None, msg_log_level:int=logging.WARNING):
+    def __init__(self, key:str=None, msg_log_level:int=logging.WARNING, start_year:int=None,
+                 end_year:int=None):
         # Setup logging stuff
         self.logger = logging.getLogger(__name__)
         if isinstance(msg_log_level, str):
@@ -41,6 +49,12 @@ class RequestBLS(object):
         self.key = key
         self.api_year_limit = 10 if key is None else 20
 
+        # Setup other
+        self.start_year = start_year
+        self.end_year = end_year
+        self.messages = []
+        self._catalog = {}
+    
     def series(
         self,
         series,
@@ -48,6 +62,7 @@ class RequestBLS(object):
         end_year:int=None,
         shape:str='wide',
         keep_footnotes:bool=False,
+        catalog:bool=True,
         rtn_msg:bool=False,
         interpolate:str=None,
         groupby:str=None, # Does not work right now
@@ -70,7 +85,8 @@ class RequestBLS(object):
                       appends all series to DataFrame; ``'wide'`` merges all series to DataFrame.
         :param keep_footnotes: If True, keeps the Footnotes field from the data. Otherwise this
                                field is dropped.
-        :param rtn_msg: Returns messages alongside the DataFrame.
+        :param catalog: Grabs the catalog from the API call and stores it in self._catalog. Only
+                        available if API key is set.
         :param interpolate: Fills in missing values. This just passes a string to df.interpolate().
                             Notably, this occurs before groupby, which is why you might want to
                             specify this in .series() instead of with the returned DataFrame.
@@ -78,10 +94,14 @@ class RequestBLS(object):
                         'm'.
         :param groupby_method: How to collapse data if it will be collapsed. 'mean' is the default
                                method. Can also do 'first', 'last', 'min', and 'max'.
-        :returns: DataFrame, or (DataFrame, [messages]) if :param:`rtn_msg` is True.
+        :returns: DataFrame
         """
         
+        self.messages = []
+        self._catalog = {}
+        
         # Handle user inputs
+        # There is a lot of LBYL instead of EAFP to avoid eating up unnecessary API calls.
         if shape not in ['wide', 'long']:
             raise InputError('shape kwarg must be either "wide" or "long".')
         if interpolate:
@@ -100,7 +120,7 @@ class RequestBLS(object):
         df = pd.DataFrame()
         r = {}
         for s_y, e_y in self._year_groups(start_year, end_year):
-            r[s_y] = self._request(series, s_y, e_y)
+            r[s_y] = self._request(series, s_y, e_y, catalog)
             next_df = self._tablefy(r[s_y].content, shape, keep_footnotes)
             df = df.append(next_df)
         df = self._cleanup_df(df, shape)
@@ -110,14 +130,22 @@ class RequestBLS(object):
             df = df.interpolate(method=interpolate)
         
         # Return
-        if rtn_msg:
-            messages = []
-            for yr in r:
-                for msg in r[yr].json()['message']:
-                    messages.append(msg)
-            return df, messages
-        else:
-            return df
+        if self.key and catalog:
+            print('got here')
+            self._catalog = {
+                s['seriesID'] : s['catalog']
+                for s in r[start_year].json()['Results']['series']
+            }
+        return df
+    
+    @property
+    def catalog(self):
+        """Returns self._catalog if self.key is defined; otherwise yell at the user for not setting
+        a key, which is required for this specific functionality.
+        """
+        if not self.key and not self._catalog:
+            raise AttributeError('Catalog is not available without a key.')
+        return self._catalog
     
     def _year_handler(self, start_year, end_year):
         """Handles the user input for years with the following logic:
@@ -130,6 +158,8 @@ class RequestBLS(object):
         :param end_year: Latest year of data to pull.
         :returns: Tuple of adjusted years.
         """
+        start_year = start_year or self.start_year or None
+        end_year = end_year or self.end_year or None
         if start_year is None and end_year is None:
             import datetime
             end_year = datetime.datetime.now().year
@@ -145,7 +175,7 @@ class RequestBLS(object):
             start_year, end_year = end_year, start_year
         return start_year, end_year
 
-    def _request(self, series:list, start_year:int, end_year:int):
+    def _request(self, series:list, start_year:int, end_year:int, catalog:bool):
         """This method is what actually posts requests after all the logic of what is supposed to
         be posted is sorted out.
         
@@ -163,9 +193,15 @@ class RequestBLS(object):
         }
         if self.key:
             post_data['registrationKey'] = self.key
+            if catalog:
+                post_data['catalog'] = catalog
         r = requests.post(BLS_BASE_URL,
                           data=json.dumps(post_data),
                           headers={'Content-type': 'application/json'})
+        # Handle invalid key
+        if len(r.json()['message']) > 0:
+            if r.json()['message'][0].find('Please provide a proper key') >= 0:
+                raise InputError(r.json()['message'][0])
         for msg in r.json()['message']:
             self.logger.log(self.msg_log_level, msg)
         return r

@@ -41,8 +41,8 @@ def test_year_handler(key_bool, start_year, end_year, expected_year_tuple):
 
 @pytest.mark.parametrize(
     'json_file, args', [
-    ('u3_2009.json', (['LNS14000000'], 2009, 2009)),
-    ('cpi_1999-2000.json', (['CUSR0000SA0L1E', 'CUUR0000SA0L1E'], 1999, 2000))
+    ('u3_2009.json', (['LNS14000000'], 2009, 2009, True)),
+    ('cpi_1999-2000.json', (['CUSR0000SA0L1E', 'CUUR0000SA0L1E'], 1999, 2000, False))
 ])
 def test_request_series(json_file, args):
     with open(os.path.join(ROOT_DIR, f'static/{json_file}')) as f:
