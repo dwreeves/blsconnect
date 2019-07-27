@@ -3,9 +3,6 @@ BLS Connect
 
 BLS Connect is an integration of BLS's API built for Python. It provides users an easy and intuitive way to import BLS data into pandas DataFrames.
 
-RequestBLS
-~~~~~~~~~~
-
 ``RequestBLS().series()`` takes a Series ID input and returns a pandas DataFrame. It contains tons of useful functionality in keyword arguments, including:
 
 - ``shape`` : Import multiple time series in either wide or long formats.
@@ -14,8 +11,6 @@ RequestBLS
 
 After running the ``.series()`` method, the ``RequestBLS()`` class also stores messages in ``.messages`` and a data catalog (if the API key was defined) in ``.catalog``. (Other than that, the data from the request is not stored in the class; be sure to assign it to a variable.) These attributes reset each time the ``.series()`` method is run.
 
-bls_search
-~~~~~~~~~~
 
 ``bls_search()`` makes it easy and intuitive to retrieve the Series ID's for the data you want for various popular series. This function seamlessly handles list inputs, returning a dictionary of all possible permutations from the lists provided.
 
