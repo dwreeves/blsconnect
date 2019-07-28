@@ -13,9 +13,7 @@ After running the ``.series()`` method, the ``RequestBLS()`` class also stores m
 
 ``bls_search()`` makes it easy and intuitive to retrieve the Series ID's for the data you want for various popular series. This function seamlessly handles list inputs, returning a dictionary of all possible permutations from the lists provided.
 
-**Note:** Functionality for ``bls_search()`` is currently limited. Check out the docs to see what it can do so far.
-
-Docs coming soon. In the meanwhile, check out the docstrings.
+**Note: Functionality for ``bls_search()`` is currently limited and not fully tested. Check out the docs to see what it can do so far.*
 
 Installation and Setup
 ----------------------
