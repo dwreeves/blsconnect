@@ -211,7 +211,7 @@ class RequestBLS(object):
         if len(r.json()['message']) > 0:
             cond = \
                 r.json()['message'][0].find('Please provide a proper key') >= 0 or \
-                j.json()['message'][0].find('Request could not be serviced, as the daily') >= 0
+                r.json()['message'][0].find('Request could not be serviced, as the daily') >= 0
             if cond:
                 raise InputError(r.json()['message'][0])
         for msg in r.json()['message']:
