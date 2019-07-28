@@ -13,7 +13,7 @@ After running the ``.series()`` method, the ``RequestBLS()`` class also stores m
 
 ``bls_search()`` makes it easy and intuitive to retrieve the Series ID's for the data you want for various popular series. This function seamlessly handles list inputs, returning a dictionary of all possible permutations from the lists provided.
 
-**Note:** Functionality for ``bls_search()`` is currently very limited to states in the LAUS (Local Area Unemployment Statistics) and the popular CPS employment series at a national level. Adding more popular time series is a key focus of future development.
+**Note:** Functionality for ``bls_search()`` is currently limited. Check out the docs to see what it can do so far.
 
 Docs coming soon. In the meanwhile, check out the docstrings.
 
@@ -39,14 +39,15 @@ A Simple Example
     MY_API_KEY = ""
     bls = RequestBLS(key=MY_API_KEY)
 
-    # Get seasonally-adjusted unemployment
-    # rates for Florida, Georgia, and all U.S.
+    # Get seasonally-adjusted unemployment rates for Florida, Georgia, and all U.S.
     series_names = bls_search(data="U3",
                               state=["FL", "GA", "US"],
                               sa=True)
+    
     df = bls.series(series_names,
                     start_year=2010,
                     end_year=2019)
+    
     df.head()
 
 About

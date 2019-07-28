@@ -131,14 +131,60 @@ SERIES_NAME_DICT ={
     "ur" : "ur", 
     "u" : "u", 
     "e" : "e", 
-    "employment" : "e", 
+    "employment" : "e",
+    "emp" : "e",
     "unemployment" : "u", 
     "total unemployed" : "u", 
     "unemployed" : "u", 
     "labor force" : "lf", 
     "lf" : "lf",
     "labor force participation rate" : "lfpr",
-    "lfpr" : "lfpr"
+    "lfpr" : "lfpr",
+    "cpi" : "cpi",
+    "inflation" : "cpi",
+    "consumer price index" : "cpi",
+    # "cpi-food-energy" : "cpi-food-energy",
+    # "cpi-energy-food" : "cpi-food-energy",
+    # "cpi-food-shelter" : "cpi-food-shelter",
+    # "cpi-shelter-food" : "cpi-food-shelter",
+    # "cpi-food" : "cpi-food",
+    # "cpi-energy" : "cpi-energy",
+    # "cpi-shelter" : "cpi-shelter",
+    # "cpi-medical" : "cpi-medical",
+    # "cpi-food-shelter-energy" : "cpi-food-shelter-energy",
+    # "cpi-food-energy-shelter" : "cpi-food-shelter-energy",
+    # "cpi-shelter-energy-food" : "cpi-food-shelter-energy",
+    # "cpi-shelter-food-energy" : "cpi-food-shelter-energy",
+    # "cpi-energy-shelter-food" : "cpi-food-shelter-energy",
+    # "cpi-energy-food-shelter" : "cpi-food-shelter-energy"
+}
+
+SIZE_CLASS = {
+    None : "0",
+    "all" : "0",
+    "a" : "S",
+    "b" : "N",
+    "c" : "N",
+    "b/c" : "N",
+    "d" : "D"
+}
+
+CPI_EXCLUDE = {
+    "cpi" : "",
+    "food" : "1",
+    "shelter" : "2",
+    "medical" : "5",
+    "energy" : "E"
+}
+
+CPI_REGION = {
+    None : "0",
+    "" : "0",
+    "us" : "0",
+    "northeast" : "1",
+    "midwest" : "2",
+    "south" : "3",
+    "west" : "4"
 }
 
 FORMAT_STRING = {
@@ -153,6 +199,7 @@ FORMAT_STRING = {
         "u" :    "LN{seas}3000000",
         "e" :    "LN{seas}2000000",
         "lf" :   "LN{seas}1000000",
-        "lfpr" : "LN{seas}1300000"
+        "lfpr" : "LN{seas}1300000",
+        "cpi" : "CU{seas}R{sizeclass}{region}00SA0{less}"
     }
 }

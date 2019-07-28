@@ -7,7 +7,7 @@ with io.open('README.rst', 'rt', encoding='utf8') as f:
 
 setup(
     name='blsconnect',
-    version='0.9.0',
+    version='0.9.1',
     packages=find_packages(),
     author='Daniel Reeves',
     maintainer='Daniel Reeves',

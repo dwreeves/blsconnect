@@ -16,13 +16,17 @@ from functools import lru_cache
 
 BLS_BASE_URL = 'https://api.bls.gov/publicAPI/v2/timeseries/data/'
 
+class InputError(Exception):
+    pass
+
 class RequestBLS(object):
     """The RequestBLS class stores an API key, which is used to get data from the BLS API with the
     .series() method.
     
     If the BLS API key is undefined by the user, the API year limit is set to 10 years instead of
-    20 years. The user can always define a date range that exceeds the year limit; the requests
-    are pulled in chunks and returned in a single DataFrame.
+    20 years. In addition, you will be unable to use the catalog feature. The user can always
+    define a date range that exceeds the year limit; the requests are pulled in chunks and returned
+    in a single DataFrame.
     
     :param key: BLS API key.
     :param msg_log_level: What level to log messages returned from an API request. Default level
@@ -47,7 +51,7 @@ class RequestBLS(object):
         
         # Setup key
         self.key = key
-        self.api_year_limit = 10 if key is None else 20
+        self.api_year_limit = 10 if not key else 20
 
         # Setup other
         self.start_year = start_year
@@ -127,11 +131,16 @@ class RequestBLS(object):
         
         # Transform data
         if interpolate:
-            df = df.interpolate(method=interpolate)
+            if shape == 'wide':
+                df = df.interpolate(method=interpolate)
+            if shape == 'long':
+                df = df.groupby('value') \
+                    .apply(lambda group: group.interpolate(method=interpolate))
+        if groupby:
+            df = self._group(df, series, shape, groupby, groupby_method)
         
         # Return
         if self.key and catalog:
-            print('got here')
             self._catalog = {
                 s['seriesID'] : s['catalog']
                 for s in r[start_year].json()['Results']['series']
@@ -200,7 +209,10 @@ class RequestBLS(object):
                           headers={'Content-type': 'application/json'})
         # Handle invalid key
         if len(r.json()['message']) > 0:
-            if r.json()['message'][0].find('Please provide a proper key') >= 0:
+            cond = \
+                r.json()['message'][0].find('Please provide a proper key') >= 0 or \
+                j.json()['message'][0].find('Request could not be serviced, as the daily') >= 0
+            if cond:
                 raise InputError(r.json()['message'][0])
         for msg in r.json()['message']:
             self.logger.log(self.msg_log_level, msg)
@@ -284,39 +296,39 @@ class RequestBLS(object):
         df = df[[c for c in df.columns if c != 'index']]
         return df
     
-    def _year_merge_df(self, start_year, end_year,):
-        rng = range((end_year - start_year + 1) * 12)
-        year = [start_year + (i // 12) for i in rng]
-        halfyears = [((i//6)%2) + 1 for i in rng]
-        quarters = [((i//3)%4) + 1 for i in rng]
-        months = [(i%12) + 1 for i in rng]
+    def _group(self, df, series, shape, groupby, groupby_method):
+        """Handles the aggregation by a specific time period.
         
-        data_dict = {
-            'year' : year,
-            'S' : halfyears,
-            'Q' : quarters,
-            'M' : months
-        }
+        :returns: pandas DataFrame.
+        """
         
-        return pd.DataFrame(data_dict)
-    # def _create_date(self, df):
-        # """Handles the logic of setting up a date column. It's here to keep the
-        # _tablefy() method a bit cleaner."""
-        # period_type = df.iloc[0].period[0] # first char of period
-        # if period_type == 'A':
-            # df = df.assign(date=pd.to_datetime(df['year'])) \
-                # .set_index('date') \
-                # .to_period(freq='A-JAN')
-        # if period_type == 'S':
-            # p = df['year'].str.cat(df['period'].str.replace('', 'Q')))
-            # df = df.assign(date=pd.to_datetime(p) \
-                # .set_index('date').to_period(freq='A-JAN')
-        # if period_type == 'Q':
-            # p = df['year'].str.cat(df['period'].str.replace('Q0', 'Q')))
-            # df = df.assign(date=pd.to_datetime(p) \
-                # .set_index('date').to_period(freq='A-JAN')
+        # create new period in a dataframe
+        groupby = groupby.upper()
+        groupby = 'A' if groupby == 'Y' else groupby
         
-        # return pd.to_datetime(,format='%Y%m%d')
-    
-    # def collect_cpi_data(msa=):
-        # pass
+        ts = pd.DataFrame()
+        ts['A'] = pd.Series(['A01' for i in range(12)])
+        ts['S'] = pd.Series([i//6 + 1 for i in range(12)]).apply(lambda i : 'S'+str(i).zfill(2))
+        ts['Q'] = pd.Series([i//3 + 1 for i in range(12)]).apply(lambda i : 'Q'+str(i).zfill(2))
+        ts['M'] = pd.Series([i+1 for i in range(12)]).apply(lambda i : 'M'+str(i).zfill(2))
+        
+        series1 = pd.concat([ts['A'], ts['S'], ts['Q'], ts['M']], axis=0)
+        series1 = series1.rename('old_period')
+        series2 = pd.concat([ts[groupby], ts[groupby], ts[groupby], ts[groupby]], axis=0)
+        series2 = series2.rename('new_period')
+        
+        gb_df = pd.concat([series1, series2], axis=1)
+        
+        # add it to the BLS data
+        df = df.merge(right=gb_df, how='left', left_on='period', right_on='old_period')
+        if shape == 'wide':
+            gb_li = ['year', 'new_period']
+            li = gb_li + series
+        if shape == 'long':
+            gb_li = ['seriesID', 'year', 'new_period']
+            li = ['seriesID', 'year', 'new_period', 'value']
+        df = df.groupby(gb_li).agg(groupby_method).reset_index()
+        df = df[li].rename(columns={'new_period' : 'period'})
+        df = self._cleanup_df(df, shape)
+        
+        return df

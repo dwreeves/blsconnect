@@ -14,6 +14,7 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 # api_key.txt has just one line for the API key and is in the parent directory.
 with open(os.path.join(ROOT_DIR, '../api_key.txt')) as f:
     api_key = f.readlines()[0].strip()
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 @pytest.mark.parametrize(
@@ -60,6 +61,30 @@ def test_tablefy(json_file, pickle_file, args):
     benchmark = pd.read_pickle(os.path.join(ROOT_DIR, f'static/{pickle_file}'))
     with open(os.path.join(ROOT_DIR, f'static/{json_file}')) as f:
         json_data = f.readlines()[0]
-    c = RequestBLS()
+    c = RequestBLS(api_key)
     df = c._cleanup_df(c._tablefy(json_data, *args), args[0])
+    assert_frame_equal(df, benchmark)
+
+dict1 = {
+    'series' : ['LNS14000000'],
+    'start_year' : 2009,
+    'end_year' : 2009,
+    'shape' : 'wide',
+    'groupby' : 'q'
+}
+dict2 = {
+    'series' : ['CUSR0000SA0L1E', 'CUUR0000SA0L1E'],
+    'start_year' : 1999,
+    'end_year' : 2000,
+    'shape' : 'long',
+    'groupby' : 's'
+}
+@pytest.mark.parametrize(
+    'kwarg_dict, pickle_file', [
+    (dict1, 'u3_2009_groupby_q.pickle'),
+    (dict2, 'cpi_1999-2000_long_groupby_s.pickle')
+])
+def test_series(kwarg_dict, pickle_file):
+    benchmark = pd.read_pickle(os.path.join(ROOT_DIR, f'static/{pickle_file}'))
+    df = RequestBLS(api_key).series(**kwarg_dict)
     assert_frame_equal(df, benchmark)
