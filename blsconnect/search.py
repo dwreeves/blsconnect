@@ -31,17 +31,13 @@ def bls_search(return_type='short', **kwargs):
     def _single_series_search(data:str=None, state:str=None, msa:str=None, region:str=None, sa:bool=None, sizeclass:str=None):
         fips = _state_to_fips(state)
         geo = 'state' if fips!='00' else 'us'
+        if data[:3] == 'cpi' and (region or sizeclass):
+                sa = False #should possibly warn user that seasonal adjustments are invalid for this data.
         if geo == 'state' or data[:3] == 'cpi':
             seas = 'S' if (sa or sa is None) else 'U'
         elif geo == 'us':
             seas = 'S1' if (sa or sa is None) else 'U0'
-        if data[:3] == 'cpi' and len(data)>3: # handle cpi data
-            if region and sa:
-                raise InputError('Seasonally adjusted data does not exist for regional CPI data.')
-            if sizeclass and sa:
-                raise InputError('Seasonally adjusted data does not exist for size class CPI data.')
-            if region or sizeclass:
-                sa = False
+        if len(data) > 3 and data[:3] == 'cpi':
             less = _cpi_less(data)
         else:
             less = ''

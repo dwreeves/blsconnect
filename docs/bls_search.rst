@@ -20,7 +20,6 @@ Example
 
 .. code-block:: python
 
-    import pandas as pd
     from blsconnect import bls_search
     
     # Seasonally-adjusted unemployment rate (U3)
@@ -32,7 +31,7 @@ Example
     print(core_cpi_series)
     
     # Seasonally adjusted and unadjusted regional CPIs.
-    regional_cpis = bls_search(data="cpi", sa=False, region=["northeast", "midwest", "south", "west"])
+    regional_cpis = bls_search(data="cpi", region=["northeast", "midwest", "south", "west"])
     print(regional_cpis)
     
     # Core CPI and unemployment (national) in list format
@@ -128,4 +127,4 @@ Development Notes
 ``bls_search()`` is still very much in development and the code is, at the moment, very spaghetti. I have no intention on adding to the spaghetti, since that will only entrench the issues in the module. Please bear with me as I try to come up with a better way to code this, and try to see this more as a way to access some commonly utilized series and a proof of concept. Be sure to check back and update blsconnect through pip when it gets figured out. Thanks!
 
 .. _data section: https://www.bls.gov/data/
-.. _Consumer Price Index Geographic Revision for 2018 :https://www.bls.gov/cpi/additional-resources/geographic-revision-2018.htm
+.. _Consumer Price Index Geographic Revision for 2018: https://www.bls.gov/cpi/additional-resources/geographic-revision-2018.htm
